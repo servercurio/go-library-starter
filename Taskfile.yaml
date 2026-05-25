@@ -88,6 +88,14 @@ tasks:
       - cmd: go generate ./...
         silent: true
 
+  build:
+    desc: "Compile every package in the module (no binary output — verifies the library tree builds end-to-end)"
+    deps:
+      - generate
+    cmds:
+      - cmd: go build ./...
+        silent: true
+
   test:
     desc: "Run all tests"
     env:

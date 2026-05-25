@@ -59,7 +59,4 @@ jobs:
         run: task lint
 
       - name: Compile Code
-        run: go build ./...
-
-      - name: Static Analysis
-        run: go vet ./...
+        run: task build
