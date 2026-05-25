@@ -1,0 +1,83 @@
+{
+  "plugins": [
+    [
+      "@semantic-release/commit-analyzer",
+      {
+        "preset": "conventionalcommits",
+        "releaseRules": [
+          { "breaking": true, "release": "minor" },
+          { "type": "chore", "release": false },
+          { "type": "docs", "release": false },
+          { "type": "style", "release": false },
+          { "type": "refactor", "release": "patch" },
+          { "type": "test", "release": false },
+          { "type": "build", "release": "patch" },
+          { "type": "ci", "release": false }
+        ]
+      }
+    ],
+    [
+      "@semantic-release/release-notes-generator",
+      { "preset": "conventionalcommits" }
+    ],
+    [
+      "@semantic-release/exec",
+      {
+        "verifyReleaseCmd": "printf '%s' \"${nextRelease.version}\" > .release-version",
+        "prepareCmd": "printf '%s' \"${nextRelease.version}\" > internal/version/version.txt && task generate",
+        "publishCmd": "task build && task hash && task sign && task sbom && task container:build:multiarch && task container:sbom && task container:sbom:sign"
+      }
+    ],
+    [
+      "@semantic-release/git",
+      {
+        "assets": ["internal/version/version.txt"],
+        "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
+      }
+    ],
+    [
+      "@semantic-release/github",
+      {
+        "assets": [
+          { "path": "bin/appcli-linux-amd64", "label": "appcli-linux-amd64" },
+          { "path": "bin/appcli-linux-amd64.sha256", "label": "appcli-linux-amd64.sha256" },
+          { "path": "bin/appcli-linux-amd64.sha256.asc", "label": "appcli-linux-amd64.sha256.asc" },
+          { "path": "bin/appcli-linux-arm64", "label": "appcli-linux-arm64" },
+          { "path": "bin/appcli-linux-arm64.sha256", "label": "appcli-linux-arm64.sha256" },
+          { "path": "bin/appcli-linux-arm64.sha256.asc", "label": "appcli-linux-arm64.sha256.asc" },
+          { "path": "bin/appcli-darwin-amd64", "label": "appcli-darwin-amd64" },
+          { "path": "bin/appcli-darwin-amd64.sha256", "label": "appcli-darwin-amd64.sha256" },
+          { "path": "bin/appcli-darwin-amd64.sha256.asc", "label": "appcli-darwin-amd64.sha256.asc" },
+          { "path": "bin/appcli-darwin-arm64", "label": "appcli-darwin-arm64" },
+          { "path": "bin/appcli-darwin-arm64.sha256", "label": "appcli-darwin-arm64.sha256" },
+          { "path": "bin/appcli-darwin-arm64.sha256.asc", "label": "appcli-darwin-arm64.sha256.asc" },
+          { "path": "bin/appcli-windows-amd64", "label": "appcli-windows-amd64" },
+          { "path": "bin/appcli-windows-amd64.sha256", "label": "appcli-windows-amd64.sha256" },
+          { "path": "bin/appcli-windows-amd64.sha256.asc", "label": "appcli-windows-amd64.sha256.asc" },
+          { "path": "bin/appcli-windows-arm64", "label": "appcli-windows-arm64" },
+          { "path": "bin/appcli-windows-arm64.sha256", "label": "appcli-windows-arm64.sha256" },
+          { "path": "bin/appcli-windows-arm64.sha256.asc", "label": "appcli-windows-arm64.sha256.asc" },
+          { "path": "bin/sbom.json", "label": "sbom.json" },
+          { "path": "bin/sbom.xml", "label": "sbom.xml" },
+          { "path": "bin/sbom.json.asc", "label": "sbom.json.asc" },
+          { "path": "bin/sbom.xml.asc", "label": "sbom.xml.asc" },
+          { "path": "bin/container-sbom.json", "label": "container-sbom.json" },
+          { "path": "bin/container-sbom.xml", "label": "container-sbom.xml" },
+          { "path": "bin/container-sbom.json.asc", "label": "container-sbom.json.asc" },
+          { "path": "bin/container-sbom.xml.asc", "label": "container-sbom.xml.asc" }
+        ]
+      }
+    ]
+  ],
+  "branches": [
+    { "name": "main" },
+    {
+      "name": "release/([0-9]+).([0-9]+)",
+      "channel": "${name.replace(/release\\//g, '').split('.')[0]}.${name.replace(/release\\//g, '').split('.')[1]}.x",
+      "range": "${name.replace(/release\\//g, '').split('.')[0]}.${name.replace(/release\\//g, '').split('.')[1]}.x"
+    },
+    { "name": "alpha/*", "prerelease": "alpha", "channel": "alpha" },
+    { "name": "beta/*", "prerelease": "beta", "channel": "beta" },
+    { "name": "rc/*", "prerelease": "rc", "channel": "rc" }
+  ]
+}
