@@ -8,7 +8,6 @@ Guidance for Claude Code working in this repository. This file covers project in
 - [`.claude/conventions.md`](.claude/conventions.md) — coding conventions for this repo
 - [`.claude/git-hooks.md`](.claude/git-hooks.md) — required local git hooks (must be installed per clone)
 
-<!-- Auto-load the reference docs above so Claude has them in context from session start. -->
 @.claude/instructions.md
 @.claude/build-commands.md
 @.claude/module-structure.md
@@ -17,35 +16,28 @@ Guidance for Claude Code working in this repository. This file covers project in
 
 ## What this project is
 
-A **starter template** for command-line tools and CLI daemons, not an application. It provides Cobra-driven subcommand scaffolding, structured logging, layered configuration, an opt-in PostgreSQL/Bun ORM, and a shared goroutine pool — and intentionally omits domain-specific business logic.
+A **starter template** for reusable Go libraries — not an application, not a CLI, not a daemon. It provides:
 
-When asked to add functionality, prefer keeping the codebase generic and composable. Don't introduce app-specific concerns (a particular database driver beyond pgx, a specific business model, an auth scheme) unless explicitly requested.
+- a curated set of eight public packages under `pkg/` (errors, version, obfusicate, logging, env, config, health, pool),
+- a single exemplar package (`pkg/greeter`) that shows the canonical shape every new package should follow,
+- an `examples/quickstart/main.go` that consumes the library exactly as a downstream importer would,
+- a release pipeline that ships a signed git tag, release notes, and a signed CycloneDX SBOM (no binaries, no containers).
 
-## Local environment vs binary defaults
-
-The `Taskfile.yaml` env block sets `APP_DAEMON_LOG_LEVEL=trace` for developer convenience. The compiled binary's own default is `info`. Don't assume Taskfile env values when reasoning about production behavior.
-
-A fresh clone won't have `vendor/` until `task vendor` (or any task that depends on it, like `task build`) runs.
+When asked to add functionality, prefer keeping the codebase generic and composable. Don't introduce app-specific concerns (a particular database driver, a specific business model, an auth scheme) unless explicitly requested.
 
 ## When adding code
 
-- **New subcommand**: behavior lives on `*Application`; the Cobra file is a thin shell. Two-file pattern: (1) add a method on `*Application` in `internal/application/application_<name>.go` that calls `app.Initialize()` and then returns `app.Run(ctx, body)` (one-shot) or `app.RunUntilSignal(ctx, body)` (daemon) around the work — `Application.Copy` and `Application.Serve` are the canonical references; (2) drop a file under `internal/cli/` returning a `*cobra.Command` whose `RunE` is a one-line delegation: `return rc.app.<Name>(cmd.Context(), ...)`. Wire any subcommand-specific flags to a local struct. Register the command in `NewRootCommand` (in `internal/cli/root.go`).
-- **New global (persistent) flag**: add it to the `PersistentFlags()` block in `NewRootCommand`, append the field to `rootFlags`, and overlay it onto `*application.Config` inside `prepare()` — gate the overlay on `cmd.Flags().Changed(...)` so unset flag defaults don't clobber values loaded from file/env.
-- **New `Application` subsystem**: create a new `application_<name>.go` with `configure<Name>` / `initialize<Name>` / `shutdown<Name>` methods as appropriate, then call them from the lifecycle phases in `application.go`. Don't grow `application.go` itself. The `pool` subsystem (`application_pool.go`) is the canonical reference. Subcommand-body files (`application_copy.go`, `application_serve.go`) reuse the same filename convention but expose a single exported entry point (`Copy`, `Serve`) instead of subsystem lifecycle hooks — they're a sibling pattern, not a replacement for it.
-- **New pool-backed worker**: call `app.Pool().SubmitWithContext(ctx, ...)`. Don't construct a one-off `ants.Pool` — using the shared pool means a single `--workers` / `APP_POOL_SIZE` knob bounds total in-flight goroutines.
-- **New config field**: add to the appropriate struct (`internal/application/config.go`, `internal/logging/config.go`, `internal/database/config.go`, `internal/pool/config.go`), give it a sensible default in the package's `DefaultConfig()`, wire env-var loading using the helpers in `internal/env/`, and extend the struct's `Validate() error` to reject obviously-bad values — `Application.Configure` returns the joined validation error and the subcommand refuses to run.
-- **New CI workflow**: file under `.github/workflows/` following the naming convention in `.github/workflows/docs/naming-standards.md` (`ddd-xxxx-name.yaml` file, matching `ddd: [XXXX] Name` workflow `name:`). PR-triggered workflows use the **200** prefix; main-branch push-triggered workflows use **300**; operational/release flows use **100**; reusable workflows use **800**. New `go:generate` directives don't need a workflow change — `task generate` is invoked by both PR reusable workflows and the release flow, and picks them up via `./...`.
-- **New SQL migration**: drop a `YYYYMMDDHHMMSS_description.sql` file (Goose convention with `-- +goose Up` / `-- +goose Down` markers) into `internal/database/migrations/sql/`. The `//go:embed` pattern picks it up at compile time — no Go code change needed. `database.Migrate` runs the up direction on every successful boot when the database subsystem is enabled.
-- **New domain model**: add a Bun struct type in a new file under `internal/database/orm/`; access the connection via `orm.Database()`. Don't write directly to `database.Connection()` from app code — go through the ORM so dialect changes stay isolated.
-- **New health component**: register a `health.CheckFunc` against `app.HealthRegistry()` from inside `Application.registerHealthChecks` (preferred — keeps lifecycle ownership of registration), or from a subcommand if the dependency lives outside the `internal/application/` package. Closures may be invoked frequently, so keep them sub-second; put expensive probes behind a cached background poller. Conditionally register subsystems that may be disabled — only active components should appear in the report.
-- **Release behaviour change**: edit `.releaserc.json` for semantic-release plugin config (commit-analyzer rules, release notes preset, exec hooks, branch channels, GitHub asset list). Cross-check that any new binary or other artifact added to `bin/` is also listed under `@semantic-release/github` `assets` so it ships with the release, AND that the `subject-path` glob in `.github/workflows/800-call-semantic-release.yaml`'s `Attest provenance for file artifacts` step includes it — every release artifact must carry a GitHub-signed Sigstore attestation. Add an `actions/attest-sbom` step too if the artifact has a corresponding SBOM.
-
-## Supply-chain signing policy
-
-This project signs **hashes, not artifacts**. `task sign` produces only `<binary>.sha256.asc` (never `<binary>.asc`). SBOMs are themselves manifests and ARE signed directly (`sbom.json.asc`, `container-sbom.json.asc`). The signed hash transitively pins the artifact. Don't add bare `<binary>.asc` entries to the release asset list or to any new signing target. In addition, every release artifact and the OCI subject (container image) is attested via `actions/attest-build-provenance` and (for SBOMs) `actions/attest-sbom`. Verification path going forward: `gh attestation verify <artifact> --owner servercurio` for primary verification, GPG-on-hashes for offline-capable secondary verification.
+- **New public package**: add it under `pkg/<name>/` and mirror `pkg/greeter`. Required files: `package.go` (or `doc.go`) opening with `// Package <name> ...`; one or more implementation files; `*_test.go` with table-driven tests; `example_test.go` (package suffix `_test`) with at least one runnable `Example*` function whose `// Output:` block doubles as a smoke test and as the godoc snippet.
+- **New exported function or type**: requires (1) a godoc comment beginning with the identifier name, (2) at least one runnable `Example*` function, (3) test coverage via a table-driven test.
+- **New error category**: define a fresh `errorx.Namespace` either inside the owning package (see `pkg/greeter.GreeterErrors`) or in `pkg/errors/` for cross-package error families. Don't introduce ad-hoc `errors.New` / `fmt.Errorf` for new categories.
+- **New config field**: add to the appropriate struct's `Config`, give it a sensible default in the package's `DefaultXxxConfig`, wire env-var loading using the helpers in `pkg/env`, and extend `Validate() error` to reject obviously-bad values. The consumer's `Validate` calls bubble back to them — there is no `Application.Configure` to short-circuit boot.
+- **New CI workflow**: file under `.github/workflows/` following the naming convention in `.github/workflows/docs/naming-standards.md` (`ddd-xxxx-name.yaml` file, matching `ddd: [XXXX] Name` workflow `name:`). PR-triggered workflows use the **200** prefix; main-branch push-triggered workflows use **300**; reusable workflows use **800**. New `go:generate` directives don't need a workflow change — `task generate` is invoked by the PR reusable workflow and by the release flow, and picks them up via `./...`.
+- **New release behaviour**: edit `.releaserc.json` for semantic-release plugin config (commit-analyzer rules, release notes preset, exec hooks, branch channels, GitHub asset list). The asset list ships only `sbom.{json,xml}{,.asc}`; don't add binary asset entries.
 
 ## Things to leave alone unless asked
 
-- This repo uses **Cobra without Viper** — config layering goes through `internal/config` + `internal/env`, not Viper. Don't pull Viper in.
+- This repo uses `pkg/env` + `pkg/config`, **not Viper**. Don't pull Viper in.
 - **ants/v2** is the only goroutine-pool library. Don't add a second.
-- `obfusicate/` exposes one tiny helper (`ConcealPrefix`) used for log redaction — leave it alone unless the task is explicitly about redaction; the misspelled package name is intentional and matches the import path.
+- `pkg/obfusicate/` exposes one tiny helper (`ConcealPrefix`) used for log redaction — leave it alone unless the task is explicitly about redaction; the misspelled package name is intentional and matches the import path.
+- The `.git/hooks/prepare-commit-msg` DCO sign-off hook is **per-clone** and **not version-controlled**. Document it in `.claude/git-hooks.md`; don't try to commit the hook itself or switch to `core.hooksPath`.
+- The release flow's signing model is "sign manifests (the SBOM) directly; sign hashes for any future binaries". Don't add bare `<binary>.asc` entries to the release asset list.

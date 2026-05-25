@@ -6,11 +6,11 @@
 
 This repository uses GitHub's [private vulnerability reporting](https://docs.github.com/en/code-security/security-advisories/guidance-on-reporting-and-writing-information-about-vulnerabilities/privately-reporting-a-security-vulnerability) to receive reports privately. To submit a report:
 
-1. Open <https://github.com/servercurio/go-cli-starter/security/advisories/new>.
+1. Open <https://github.com/servercurio/go-library-starter/security/advisories/new>.
 2. Provide a clear description of the issue, the affected component, and a minimal reproduction (commit hash, configuration, sample request, etc.).
 3. Suggest an impact assessment if you are able (CVSS vector or plain-language severity).
 
-If you cannot use GitHub's reporting flow, email the maintainer at **nathan@theklickfamily.com** with the subject line `[SECURITY] go-cli-starter`. Encrypted mail is welcome; ask for a current public key in your initial (unencrypted) message.
+If you cannot use GitHub's reporting flow, email the maintainer at **nathan@theklickfamily.com** with the subject line `[SECURITY] go-library-starter`. Encrypted mail is welcome; ask for a current public key in your initial (unencrypted) message.
 
 ## What to Expect
 
@@ -23,13 +23,13 @@ We aim to publish fixes for confirmed vulnerabilities within 90 days of triage. 
 
 ## Scope
 
-This policy covers the source code in this repository and any release artifact published from its `100-user-deploy-release-artifact.yaml` workflow.
+This policy covers the source code published as the `github.com/servercurio/go-library-starter` Go module and the SBOM artefacts produced by `.github/workflows/800-call-semantic-release.yaml`. Because the module is consumed via `go get`, a vulnerability here propagates into every importer's build — please weight reports accordingly.
 
 Out of scope:
 
 - Vulnerabilities in third-party dependencies. Report those upstream; if exploitation requires this project to expose them in a non-default way, that part of the chain is in scope.
 - Findings from automated scanners without a working proof of concept.
-- Configuration choices made by downstream consumers (this is a starter template — production decisions about subcommand surface, file-system trust boundaries, secrets handling, etc. are the deploying party's responsibility).
+- Configuration choices made by downstream consumers (this is a library starter — how an importer wires `pkg/logging`, `pkg/config`, etc. into their own application is the consuming party's responsibility).
 
 ## Supported Versions
 
