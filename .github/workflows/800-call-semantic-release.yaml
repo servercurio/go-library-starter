@@ -24,11 +24,6 @@ on:
         type: string
         required: false
         default: "3.39.2"
-      syft-version:
-        description: "Syft release version (used for container SBOM generation):"
-        type: string
-        required: false
-        default: "v1.18.1"
     outputs:
       version:
         description: "Version produced by semantic-release (empty if no release)"
@@ -41,7 +36,7 @@ on:
         description: "GitHub token used for tagging, committing the version bump, and publishing the release. Use the default GITHUB_TOKEN for unprotected branches; use a PAT (e.g. GH_ACCESS_TOKEN) when branch protection requires bypass."
         required: true
       gpg-private-key:
-        description: "ASCII-armored GPG private key used to sign the release commit and the SHA256SUMS artifact"
+        description: "ASCII-armored GPG private key used to sign the release commit and the SBOM artefacts"
         required: true
       gpg-passphrase:
         description: "Passphrase for the GPG private key"
@@ -62,7 +57,6 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
-      packages: write       # GHCR push for the multi-arch container image
       id-token: write       # OIDC token for actions/attest-* (Sigstore Fulcio keyless signing)
       attestations: write   # GitHub attestation API — write provenance/sbom predicates
     outputs:
@@ -122,49 +116,6 @@ jobs:
           HOOK
           chmod +x .git/hooks/prepare-commit-msg
 
-      # --------------------------------------------------------------------
-      # Multi-arch container publishing setup. The publishCmd in
-      # .releaserc.json calls `task container:build:multiarch`, which
-      # assumes the caller has already configured QEMU/buildx and logged
-      # into GHCR.
-      # --------------------------------------------------------------------
-
-      - name: Set up QEMU
-        # SHA pin: docker/setup-qemu-action@v3.6.0. Verify before merge against
-        # https://github.com/docker/setup-qemu-action/releases.
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a # v4.0.0
-
-      - name: Set up Docker Buildx
-        # SHA pin: docker/setup-buildx-action@v3.10.0. Verify before merge.
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
-
-      - name: Login to GHCR (docker)
-        # SHA pin: docker/login-action@v3.4.0. Verify before merge.
-        uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.release-token }}
-
-      - name: Install syft
-        env:
-          SYFT_VERSION: ${{ inputs.syft-version }}
-        run: |
-          set -euo pipefail
-          version_no_v="${SYFT_VERSION#v}"
-          curl -fsSLo /tmp/syft.tar.gz "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${version_no_v}_linux_amd64.tar.gz"
-          curl -fsSLo /tmp/syft_checksums.txt "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/syft_${version_no_v}_checksums.txt"
-          # Extract the expected sha256 for the linux_amd64 tarball and verify it.
-          expected_sha="$(grep "syft_${version_no_v}_linux_amd64.tar.gz" /tmp/syft_checksums.txt | awk '{print $1}')"
-          actual_sha="$(sha256sum /tmp/syft.tar.gz | awk '{print $1}')"
-          if [[ "${expected_sha}" != "${actual_sha}" ]]; then
-            echo "syft checksum mismatch: expected ${expected_sha}, got ${actual_sha}" >&2
-            exit 1
-          fi
-          tar -xzf /tmp/syft.tar.gz -C /tmp
-          sudo mv /tmp/syft /usr/local/bin/syft
-          syft version
-
       - name: Install Semantic Release
         # --ignore-scripts disables npm package lifecycle scripts
         # (preinstall/install/postinstall) for both direct and transitive
@@ -208,110 +159,32 @@ jobs:
           fi
 
       # ------------------------------------------------------------------
-      # GitHub-signed Sigstore attestations. Every release artifact gets a
-      # provenance attestation; SBOMs additionally bind to their subjects via
-      # attest-sbom. Both predicates are stored in the GitHub attestation log
-      # and (for OCI subjects) pushed alongside the manifest in GHCR.
+      # GitHub-signed Sigstore attestations. The source SBOM (CycloneDX
+      # JSON and XML) gets a provenance attestation and an attest-sbom
+      # binding so consumers can verify the dependency manifest both via
+      # `gh attestation verify` and via the GitHub attestation log.
       # ------------------------------------------------------------------
 
-      - name: Attest provenance for file artifacts
-        if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
-        # SHA pin: actions/attest-build-provenance@v2.4.0. Verify before merge.
-        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
-        with:
-          # Cover every file shipped as a GitHub release asset: binaries, hash
-          # files, GPG-signed hashes, and every SBOM (.json/.xml + .asc).
-          # Exclude *.digest (workflow scratch files, not released).
-          subject-path: |
-            bin/appcli-linux-amd64
-            bin/appcli-linux-amd64.sha256
-            bin/appcli-linux-amd64.sha256.asc
-            bin/appcli-linux-arm64
-            bin/appcli-linux-arm64.sha256
-            bin/appcli-linux-arm64.sha256.asc
-            bin/appcli-darwin-amd64
-            bin/appcli-darwin-amd64.sha256
-            bin/appcli-darwin-amd64.sha256.asc
-            bin/appcli-darwin-arm64
-            bin/appcli-darwin-arm64.sha256
-            bin/appcli-darwin-arm64.sha256.asc
-            bin/appcli-windows-amd64
-            bin/appcli-windows-amd64.sha256
-            bin/appcli-windows-amd64.sha256.asc
-            bin/appcli-windows-arm64
-            bin/appcli-windows-arm64.sha256
-            bin/appcli-windows-arm64.sha256.asc
-            bin/sbom.json
-            bin/sbom.xml
-            bin/sbom.json.asc
-            bin/sbom.xml.asc
-            bin/container-sbom.json
-            bin/container-sbom.xml
-            bin/container-sbom.json.asc
-            bin/container-sbom.xml.asc
-
-      - name: Read OCI digests
-        id: read-digests
-        if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
-        run: |
-          set -euo pipefail
-          [ -f bin/container-image.digest ] || { echo "bin/container-image.digest missing" >&2; exit 1; }
-          echo "container_digest=$(cat bin/container-image.digest)" >> "${GITHUB_OUTPUT}"
-
-      - name: Attest provenance for container image
+      - name: Attest provenance for SBOM artefacts
         if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
         uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          subject-name: ghcr.io/servercurio/go-cli-starter
-          subject-digest: ${{ steps.read-digests.outputs.container_digest }}
-          push-to-registry: true
-
-      # actions/attest-sbom takes one sbom-path per call. The CycloneDX
-      # SBOMs are produced in both JSON and XML; emit a separate SBOM
-      # attestation for each format so consumers can verify whichever
-      # encoding their tooling consumes.
-
-      - name: Attest Go CycloneDX JSON SBOM against each binary
-        if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
-        # SHA pin: actions/attest-sbom@v2.4.0. Verify before merge.
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
-        with:
           subject-path: |
-            bin/appcli-linux-amd64
-            bin/appcli-linux-arm64
-            bin/appcli-darwin-amd64
-            bin/appcli-darwin-arm64
-            bin/appcli-windows-amd64
-            bin/appcli-windows-arm64
-          sbom-path: bin/sbom.json
+            sbom.json
+            sbom.xml
+            sbom.json.asc
+            sbom.xml.asc
 
-      - name: Attest Go CycloneDX XML SBOM against each binary
+      - name: Attest CycloneDX JSON SBOM
         if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
-          subject-path: |
-            bin/appcli-linux-amd64
-            bin/appcli-linux-arm64
-            bin/appcli-darwin-amd64
-            bin/appcli-darwin-arm64
-            bin/appcli-windows-amd64
-            bin/appcli-windows-arm64
-          sbom-path: bin/sbom.xml
+          subject-path: sbom.json
+          sbom-path: sbom.json
 
-      - name: Attest container CycloneDX JSON SBOM against container image
+      - name: Attest CycloneDX XML SBOM
         if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
         uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
         with:
-          subject-name: ghcr.io/servercurio/go-cli-starter
-          subject-digest: ${{ steps.read-digests.outputs.container_digest }}
-          sbom-path: bin/container-sbom.json
-          push-to-registry: true
-
-      - name: Attest container CycloneDX XML SBOM against container image
-        if: ${{ inputs.dry-run == false && steps.semantic-release.outputs.released == 'true' }}
-        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
-        with:
-          subject-name: ghcr.io/servercurio/go-cli-starter
-          subject-digest: ${{ steps.read-digests.outputs.container_digest }}
-          sbom-path: bin/container-sbom.xml
-          push-to-registry: true
+          subject-path: sbom.xml
+          sbom-path: sbom.xml

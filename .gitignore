@@ -792,10 +792,11 @@ secring.*
 # Custom Ignore Rules (Add additional definitions below)                                           #
 ####################################################################################################
 
-dist/
-bin/
-internal/version/commit.txt
-internal/openapi/logo.svg
+pkg/version/commit.txt
+sbom.json
+sbom.json.asc
+sbom.xml
+sbom.xml.asc
 
 # Claude Code — local-only settings (per-developer overrides)
 .claude/settings.local.json

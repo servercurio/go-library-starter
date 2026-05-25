@@ -24,14 +24,14 @@
       "@semantic-release/exec",
       {
         "verifyReleaseCmd": "printf '%s' \"${nextRelease.version}\" > .release-version",
-        "prepareCmd": "printf '%s' \"${nextRelease.version}\" > internal/version/version.txt && task generate",
-        "publishCmd": "task build && task hash && task sign && task sbom && task container:build:multiarch && task container:sbom && task container:sbom:sign"
+        "prepareCmd": "printf '%s' \"${nextRelease.version}\" > pkg/version/version.txt && task generate",
+        "publishCmd": "task sbom"
       }
     ],
     [
       "@semantic-release/git",
       {
-        "assets": ["internal/version/version.txt"],
+        "assets": ["pkg/version/version.txt"],
         "message": "chore(release): ${nextRelease.version} [skip ci]\n\n${nextRelease.notes}"
       }
     ],
@@ -39,32 +39,10 @@
       "@semantic-release/github",
       {
         "assets": [
-          { "path": "bin/appcli-linux-amd64", "label": "appcli-linux-amd64" },
-          { "path": "bin/appcli-linux-amd64.sha256", "label": "appcli-linux-amd64.sha256" },
-          { "path": "bin/appcli-linux-amd64.sha256.asc", "label": "appcli-linux-amd64.sha256.asc" },
-          { "path": "bin/appcli-linux-arm64", "label": "appcli-linux-arm64" },
-          { "path": "bin/appcli-linux-arm64.sha256", "label": "appcli-linux-arm64.sha256" },
-          { "path": "bin/appcli-linux-arm64.sha256.asc", "label": "appcli-linux-arm64.sha256.asc" },
-          { "path": "bin/appcli-darwin-amd64", "label": "appcli-darwin-amd64" },
-          { "path": "bin/appcli-darwin-amd64.sha256", "label": "appcli-darwin-amd64.sha256" },
-          { "path": "bin/appcli-darwin-amd64.sha256.asc", "label": "appcli-darwin-amd64.sha256.asc" },
-          { "path": "bin/appcli-darwin-arm64", "label": "appcli-darwin-arm64" },
-          { "path": "bin/appcli-darwin-arm64.sha256", "label": "appcli-darwin-arm64.sha256" },
-          { "path": "bin/appcli-darwin-arm64.sha256.asc", "label": "appcli-darwin-arm64.sha256.asc" },
-          { "path": "bin/appcli-windows-amd64", "label": "appcli-windows-amd64" },
-          { "path": "bin/appcli-windows-amd64.sha256", "label": "appcli-windows-amd64.sha256" },
-          { "path": "bin/appcli-windows-amd64.sha256.asc", "label": "appcli-windows-amd64.sha256.asc" },
-          { "path": "bin/appcli-windows-arm64", "label": "appcli-windows-arm64" },
-          { "path": "bin/appcli-windows-arm64.sha256", "label": "appcli-windows-arm64.sha256" },
-          { "path": "bin/appcli-windows-arm64.sha256.asc", "label": "appcli-windows-arm64.sha256.asc" },
-          { "path": "bin/sbom.json", "label": "sbom.json" },
-          { "path": "bin/sbom.xml", "label": "sbom.xml" },
-          { "path": "bin/sbom.json.asc", "label": "sbom.json.asc" },
-          { "path": "bin/sbom.xml.asc", "label": "sbom.xml.asc" },
-          { "path": "bin/container-sbom.json", "label": "container-sbom.json" },
-          { "path": "bin/container-sbom.xml", "label": "container-sbom.xml" },
-          { "path": "bin/container-sbom.json.asc", "label": "container-sbom.json.asc" },
-          { "path": "bin/container-sbom.xml.asc", "label": "container-sbom.xml.asc" }
+          { "path": "sbom.json", "label": "sbom.json" },
+          { "path": "sbom.xml", "label": "sbom.xml" },
+          { "path": "sbom.json.asc", "label": "sbom.json.asc" },
+          { "path": "sbom.xml.asc", "label": "sbom.xml.asc" }
         ]
       }
     ]
