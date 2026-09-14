@@ -2,7 +2,7 @@
 
 ## Tech Stack & Go Version
 
-Go 1.26 is required. Flag any code suggestions targeting older Go versions or using deprecated APIs (e.g. `ioutil.*`, pre-generics patterns where generics are clearer).
+Go 1.27 is required. Flag any code suggestions targeting older Go versions or using deprecated APIs (e.g. `ioutil.*`, pre-generics patterns where generics are clearer).
 
 [Task](https://taskfile.dev) is the canonical build runner — never suggest invoking raw `go build` / `go test` for anything beyond a quick check; route work through `Taskfile.yaml` targets.
 

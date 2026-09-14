@@ -86,7 +86,7 @@ Releases are driven by [semantic-release](https://github.com/semantic-release/se
 |---|---|---|
 | Signed git tag | `vX.Y.Z` | Tag commit is GPG-signed by the release pipeline. |
 | Release notes | GitHub release body | Generated from conventional-commit messages. |
-| Source SBOM | `sbom.json`, `sbom.xml` | CycloneDX 1.5; covers the Go module dependency tree. |
+| Source SBOM | `sbom.json`, `sbom.xml` | CycloneDX 1.6; covers the Go module dependency tree. |
 | SBOM signatures | `sbom.json.asc`, `sbom.xml.asc` | Detached GPG signatures of each SBOM. |
 | Sigstore attestations | GitHub attestation log | `actions/attest-build-provenance` + `actions/attest-sbom` against each SBOM. |
 

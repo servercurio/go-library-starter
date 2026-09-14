@@ -13,17 +13,17 @@ on:
         description: "Node.js Version:"
         type: string
         required: false
-        default: "22"
+        default: "24"
       go-version:
         description: "Go Version:"
         type: string
         required: false
-        default: "1.26.5"
+        default: "1.27.1"
       task-version:
         description: "Task Version:"
         type: string
         required: false
-        default: "3.39.2"
+        default: "3.53.1"
     outputs:
       version:
         description: "Version produced by semantic-release (empty if no release)"
@@ -124,13 +124,13 @@ jobs:
         # install scripts to function.
         run: |
           npm install -g --ignore-scripts \
-            semantic-release@24.2.4 \
+            semantic-release@25.0.9 \
             @semantic-release/commit-analyzer@13.0.1 \
-            @semantic-release/release-notes-generator@14.0.3 \
+            @semantic-release/release-notes-generator@14.1.1 \
             @semantic-release/exec@7.1.0 \
-            @semantic-release/git@10.0.1 \
-            @semantic-release/github@11.0.1 \
-            conventional-changelog-conventionalcommits@8.0.0
+            @semantic-release/git@11.0.1 \
+            @semantic-release/github@12.0.9 \
+            conventional-changelog-conventionalcommits@10.4.0
 
       - name: Run Semantic Release
         id: semantic-release
