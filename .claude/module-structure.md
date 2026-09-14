@@ -15,7 +15,7 @@ Public surface lives under `pkg/`. Each package is exported (no `internal/` segm
 ## Sibling directories
 
 - `examples/quickstart/` — a `package main` that imports `pkg/greeter`, `pkg/logging`, and `pkg/version` to show what downstream consumption looks like. Builds with `go build ./...` so CI's `Compile Code` step exercises it.
-- `docs/` — Non-Go documentation assets. `logo.svg` is embedded at the top of the README and is not consumed by any Go code.
+- `docs/` — Non-Go documentation assets. `logo.svg` is the full Server Curio logo; `logo-mark.svg` is the SC mark only, embedded at the top of the README. Neither is consumed by any Go code.
 - `.github/workflows/` — CI workflows, numbered per `.github/workflows/docs/naming-standards.md`. The 200/300-series flows run on PRs and `main` respectively; both delegate to 800-series reusables: `800-call-code-compiles.yaml`, `800-call-unit-test.yaml`, `800-call-vulncheck.yaml`. Releases run via `800-call-semantic-release.yaml` (tag + notes + signed source SBOM). Semantic-release plugin config lives in `.releaserc.json` at the repo root.
 
 There is no `cmd/` directory: this module has no `main` package shipped under `cmd/`. The only `package main` lives at `examples/quickstart/main.go` and exists solely to demonstrate consumption.
