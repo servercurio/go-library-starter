@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package config locates and parses YAML/JSON configuration files into Go
 // structs. Callers supply a list of search paths and a base name, and
 // FromPaths walks them looking for matching files. The package handles file

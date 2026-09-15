@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package greeter is the canonical exemplar of how to write a small,
 // idiomatic, well-tested package in this starter.
 //

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package health implements an in-process health-check registry and the
 // report model snapshotted by callers (a server's readiness loop, a CLI
 // "health" command, or any other consumer).

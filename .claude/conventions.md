@@ -1,3 +1,7 @@
+<!--
+  ~ SPDX-License-Identifier: Apache-2.0
+-->
+
 # Conventions
 
 - **Library-first design.** This module is consumed by other Go programs via `go get github.com/servercurio/go-library-starter@<version>`. There is no application lifecycle, no Cobra command tree, no `Application` type, no signal handling. Don't introduce them.
