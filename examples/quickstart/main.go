@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Quickstart demonstrates how a downstream consumer wires the starter's
 // packages together: hydrate a logging.Config from env, initialize the
 // default logger, and emit one structured event built from pkg/greeter.

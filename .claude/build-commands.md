@@ -1,3 +1,7 @@
+<!--
+  ~ SPDX-License-Identifier: Apache-2.0
+-->
+
 # Key Build Commands
 
 - `task` — Default pipeline: vendor → lint → test.

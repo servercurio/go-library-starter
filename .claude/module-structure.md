@@ -1,3 +1,7 @@
+<!--
+  ~ SPDX-License-Identifier: Apache-2.0
+-->
+
 # Module Structure
 
 Public surface lives under `pkg/`. Each package is exported (no `internal/` segment) so downstream consumers can `go get` and import directly.
